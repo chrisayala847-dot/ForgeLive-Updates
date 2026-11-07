@@ -1,0 +1,13 @@
+{
+  "revision": 2,
+  "spawns": [
+    {
+      "id": "remote-demo-001",
+      "class": "demo_building",
+      "x": 0,
+      "y": 0,
+      "z": 500,
+      "yaw": 0
+    }
+  ]
+}
