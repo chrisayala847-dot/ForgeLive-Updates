@@ -1,10 +1,18 @@
 {
-  "revision": 2,
+  "revision": 3,
   "spawns": [
     {
       "id": "remote-demo-001",
       "class": "demo_building",
       "x": 0,
+      "y": 0,
+      "z": 500,
+      "yaw": 0
+    },
+    {
+      "id": "remote-live-test-002",
+      "class": "demo_building",
+      "x": 700,
       "y": 0,
       "z": 500,
       "yaw": 0
