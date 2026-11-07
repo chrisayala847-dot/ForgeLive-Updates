@@ -1,0 +1,59 @@
+name: Validate public ForgeLive world updates
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Validate manifest schema, allowlist and unique IDs
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json, math, pathlib, subprocess
+          p = pathlib.Path("world.json")
+          doc = json.loads(p.read_text(encoding="utf-8"))
+          assert isinstance(doc, dict), "Manifest must be a JSON object"
+          rev = doc.get("revision")
+          assert type(rev) is int and 0 <= rev <= 2147483647, "revision must be a nonnegative integer"
+          spawns = doc.get("spawns")
+          assert isinstance(spawns, list) and len(spawns) <= 100, "spawns must have 0-100 entries"
+          ids = set()
+          for item in spawns:
+              assert isinstance(item, dict), "each spawn must be an object"
+              uid = item.get("id")
+              assert isinstance(uid, str) and 0 < len(uid) <= 128, "bad spawn ID"
+              assert uid not in ids, f"duplicate ID: {uid}"
+              ids.add(uid)
+              assert item.get("class") == "demo_building", "class not on the test allowlist"
+              for field in ("x", "y", "z"):
+                  n = item.get(field)
+                  assert type(n) in (float, int) and math.isfinite(n) and abs(n) <= 10000000, f"bad {field}"
+              yaw = item.get("yaw", 0)
+              assert type(yaw) in (float, int) and math.isfinite(yaw), "bad yaw"
+          print(f"Schema passed: revision={rev}, spawns={len(spawns)}")
+          PY
+      - name: Ensure PR revision increases
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json, subprocess
+          before = json.loads(subprocess.check_output(["git", "show", "origin/main:world.json"], text=True))
+          after = json.load(open("world.json", encoding="utf-8"))
+          if before != after:
+              assert after["revision"] > before["revision"], "Changed world.json requires higher revision"
+          print("Revision comparison passed")
+          PY
